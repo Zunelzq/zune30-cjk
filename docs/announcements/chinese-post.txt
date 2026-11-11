@@ -78,6 +78,8 @@ ARM 程序把它加载进 GDI。英文继续用 Zegoe，中文来自我们的字
    来源：你自己的 Zune 4.8 安装包，或装过 4.8 的电脑缓存目录
 
 4）1.0 TEST 固件包（只用里面的启动器）
+   百度网盘：https://pan.baidu.com/s/18b5y_YaDJl37jKlNfTKSAw?pwd=zune
+   提取码：zune
    常见文件名 Zune01050485(1.0test).cab
    大小 15,619,281 字节
    sha256 59eac3f4f712b5f0c99f15eef4ed84058c76000f5f0b89493625efec5bdbde12
