@@ -17,16 +17,37 @@ An honest log. Several of these cost hours; all of them are reproducible.
 **Conclusion:** with a retail bootloader there is no software path. The only reason this
 project exists is the 1.0 TEST EBoot that does not check `nk.bin`.
 
-## B. Registry-based CJK attempts on 3.3 (all no-ops)
+## B. Registry-based CJK attempts on 3.3 — and our wrong conclusion
 
-| Attempt | Result |
-|---|---|
-| `HKLM\SOFTWARE\Microsoft\FontLink\SystemLink` for the three Zegoe faces | no change |
-| `HKLM\init` `Launch45` + `Depend45` to run a native `AddFontResourceW` loader | no change |
-| Rewrite `Software\Microsoft\Zune\Fonts\<face>\Locator` to `file://\Hard Disk\c.ttf` | no change |
-| Add `FallbackFont` entries pointing at a CJK font entry | no change |
-| Swap `ZegoeUI.ttf` ↔ `ZegoeUI_SB.ttf` in the locators | no change — proves the registry is not read |
-| Point the loader at a missing file | no change — proves the loader itself is irrelevant |
+This section is a cautionary tale: we concluded too early that 3.3 ignores FontLink, wrote it
+down, and only later found out that **the mechanism works and our configuration was wrong**.
+
+| Attempt | Result at the time | Truth |
+|---|---|---|
+| `HKLM\SOFTWARE\Microsoft\FontLink\SystemLink` for the three Zegoe faces | no change | **implemented correctly, this works** |
+| `HKLM\init` `Launch45` + `Depend45` to run a native `AddFontResourceW` loader | no change | works, but the loader must point at an existing file of exactly the expected size |
+| Rewrite `Software\Microsoft\Zune\Fonts\<face>\Locator` to `file://\Hard Disk\c.ttf` | no change | this key really is not consulted for the UI faces |
+| Add `FallbackFont` entries pointing at a CJK font entry | no change | likewise unused |
+| Swap `ZegoeUI.ttf` ↔ `ZegoeUI_SB.ttf` in those locators | no change | consistent: `Zune\Fonts` is not read |
+| Point the loader at a missing file | no change | consistent with the loader never running successfully |
+
+### Why the FontLink attempts failed
+
+Three independent configuration errors, each of which alone was enough to break it:
+
+1. **Wrong partition.** `\Hard Disk` is the *system* partition (`F:`), not the data partition
+   (`G:`). The font was on `G:`, so the loader never found it.
+2. **Wrong family name.** The registry value is `path,Family`; GDI resolves the family by its
+   internal name. We registered `SimSun` while the file had been renamed, or vice versa.
+3. **Wrong loader.** The size check (`GetFileSize == 8,206,424`) silently produced "no font
+   loaded" for any other font.
+
+Once all three were corrected (upstream's recipe, followed exactly), Chinese appeared with the
+original Zegoe Latin intact. See `05-font-mechanism.md`.
+
+> Lesson: "the registry value did not change the UI" and "the mechanism is not used" are
+> different claims. We ran the first experiment, not the second.
+
 
 See `05-font-mechanism.md` for what actually happens instead.
 

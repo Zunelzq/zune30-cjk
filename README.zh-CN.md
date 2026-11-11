@@ -1,13 +1,30 @@
 # Zune 30（Keel）——官方 3.3 固件原生显示中日文
 
-**状态：已在真机验证通过**（i.MX31 Zune 30，30 GB，官方 3.3 (39) 固件）。
+**状态：已在真机验证通过。**
+
+> ## 先说清楚：这是站在别人肩膀上做的
+>
+> 本方案的核心方法、工具链和关键知识全部来自
+> **[`1977899016-cell/zune30-research`](https://github.com/1977899016-cell/zune30-research)**：
+> AUTH196 镜像构建器、CE BIN/LZX 工具链、`default.fdf` 注册表编辑器、原生字体加载器
+> （`ZCJKBoot.exe`）以及 FontLink 方案本身。
+>
+> 我们做的事比他们少：
+> 1. 按他们的配方操作，**发现并修正了三处让我们这边失败的配置错误**，并写清了错误是什么；
+> 2. **解锁了加载器写死的 8,206,424 字节尺寸校验**，因此任意大小字体都能用；
+> 3. 补上了他们刻意留给用户的环节——镜像打包、固件版本串、`C00D11CD` 同步修复——并做成可复现脚本。
+>
+> 如果你要用这里的任何东西，请先去给他们的仓库点 star。
+
+一台第一代 Zune 30（30GB），运行**官方 3.3 (39) 固件**，现在可以原生显示中文和日文。
 
 | 项目 | 修改前 | 修改后 |
 |---|---|---|
-| 设备名 | `Zune□□□` | `Zune示例名` |
+| 设备名 | `Zune□□□` | 中文正常显示 |
 | 中文歌名 | `□□□□` | `巨大少女` |
 | 日文歌名 | `□□□□` | `そらのおとしもの ～エターナル・イ...` |
 | 歌手 | `□□, □□□` | `40mP, 初音ミク` |
+| 英文界面 | Zegoe | **仍是原版 Zegoe**（FontLink 只补缺失字形） |
 
 | 开机画面 | 主菜单 |
 |---|---|
@@ -17,150 +34,118 @@
 |---|---|
 | ![jp](assets/03-now-playing-jp-redacted.jpg) | ![cn](assets/04-now-playing-cn-redacted.jpg) |
 
-据公开资料，这是第一次有人在**官方 3.3 固件**上做到原生 CJK：
-
-* 2009 年贴吧的中文方案只做到 **1.0 TEST / 1.4**；
-* `zune30-research` 项目明确说明其 3.3 兼容镜像**不含中文**。
-
-本仓库只包含**分析与脚本**，不分发任何微软固件、不包含任何商业字体。
+**从教程开始 → [`docs/tutorial.zh-CN.md`](docs/tutorial.zh-CN.md)**（中文，步骤最细） ·
+[`docs/tutorial.md`](docs/tutorial.md)（English）
 
 ---
 
-## 核心原理（一句话）
+## 一句话原理
 
-3.3 的界面程序 `gemstone.exe` **不走 GDI 的字体回退（FontLink）**，它自己从 ROM 里读取三个文件：
+3.3 的界面通过系统 GDI 画字。GDI 支持 **FontLink**：当主字体（ROM 里的 `Zegoe UI` 系列）
+缺某个字形时，可以从第二个字体里取。所以我们把中文字体注册成"回退字体"，并在界面程序启动前
+用一个极小的 ARM 程序把它加载进 GDI。英文继续用 Zegoe，中文从中文字体来。
 
-```
-\Windows\ZegoeUI.ttf        （常规）
-\Windows\ZegoeUI_L.ttf      （细体）
-\Windows\ZegoeUI_SB.ttf     （半粗，默认字体）
-```
+前提才是难点：
 
-所以唯一改变 3.3 字体渲染的方法，就是**把这三个 ROM 文件的内容换成含 CJK 字形的字体**。
+* 需要一个 **1.0 TEST 启动器**（零售 3.3 的启动器会校验 `nk.bin`）；
+* 需要 **AUTH196** 镜像（3.3 在 1.0 时代的 vault 上会黑屏）；
+* 字体必须放在 `\Hard Disk` —— 这是**150 MB 系统分区**，不是数据分区（我们在这上面错了几个小时）；
+* 注册表里的字族名必须和字体内部名称**完全一致**；
+* 加载器会把文件大小和一个写死的常量比对，必须改成你的字体大小。
 
-难点是 ROM 空间：空闲只有 36 KB，而中文字体动辄几百 KB。
-解法：**原地压缩 `skin_default.gem`**（464 KB → 334 KB），腾出 130 KB 连续尾部空间，
-再占用两个零售机不用的 `zdkscenes*.gem` 槽位，合计 163–180 KB 连续空间。
-
-其他所有尝试（注册表 `Zune\Fonts\*` 的 Locator、GDI FontLink、FallbackFont、开机字体加载器）
-在 3.3 上**全部无效**，详见 `docs/09-lessons-learned.md`。
+另有一条 **ROM 替换**路线（直接替换 `ZegoeUI*.ttf` 三个文件），也能成功，写在
+`docs/06-rom-space.md`。它的好处是不需要启动程序，代价是英文也会变成中文字体的拉丁字形。
 
 ---
 
-## 前提：一个"宽松"的启动器
-
-零售 3.3 的 EBoot 会对 `nk.bin` 验签（MinCrypt + HAB），任何改动都会导致拒绝启动，
-甚至格式化整个 150 MB 系统分区。
-
-突破口是 **1.0 TEST 的启动器**（sha256 前缀 `11D94DE4…`，开机显示 `Bootloader 2`）：
-它被生产熔丝接受，但**不校验 `nk.bin`**。一旦它进入 NOR，之后随便改 `nk.bin` 都能启动。
-
-> ⚠️ 这是整个工程最关键的资产。一旦被零售 EBoot 覆盖就**无法恢复**
-> （EBoot 在 NOR 里、HAB 每次开机验签，改不了）。
-> **永远不要让 Zune 软件"还原/修复设备"。**
-
----
-
-## 镜像结构
+## 仓库结构
 
 ```
-nk.bin（B000FF 容器，110 条记录，base 0x88200000，ram_start 0x88f90000）
- ├── 官方 3.3 镜像                    （来自你自己的 KeelBaseline.cab）
- ├── AUTH196 补丁                     （开机时重封装旧 vault）
- ├── 版本号补丁                       （0x7cda6c，固定为 03.30.00039.00-00435）
- ├── skin_default.gem                 （原地压缩，flags |= 0x800）
- └── ZegoeUI*.ttf 三个条目            （全部指向同一个 CJK 字体，压缩存储）
-```
-
-* AUTH196 用公开的 `zune30-research` 工具、从**你自己的** NOR/vault 备份离线构建，
-  含你的设备身份，**绝对不能公开**。
-* CJK 字体是**去掉 hinting 的 TrueType 子集**（ASCII + 假名 + 曲库中 N 个高频汉字），
-  内部字族名改成 `Zegoe UI Semibold`，用 CE-LZX 压缩，**块大小必须 4096**（其他大小解码器不接受）。
-
-真机实测尺寸：
-
-| 项目 | 数值 |
-|---|---|
-| 镜像 span | 13,956,899 B |
-| ROM 尾部空隙 | 36,496 B |
-| 三个 Zegoe 槽位（连续） | 112,948 B |
-| `skin_default.gem` | 464,259 → 333,565 B |
-| 字体可用连续空间 | 163,325 B（950 字）/ 180,776 B（1,050 字） |
-| 无 hinting 字体（1,050 汉字 + 假名 + ASCII） | 231,240 → 177,460 B 压缩 |
-
----
-
-## 目录结构
-
-```
-README.md                  英文说明
-README.zh-CN.md            本文件
+README.md / README.zh-CN.md     总览（本文件）
+NOTICE.md                       法律范围、去敏说明、致谢
 docs/
-  01-background.md         硬件、启动链、三层保护
-  02-lax-bootloader.md     1.0 TEST 启动器
-  03-nor-vault-backup.md   不拆芯片读取 NOR / vault
-  04-auth196.md            让 3.3 在旧 vault 上跑起来
-  05-font-mechanism.md     字体加载机制（核心发现）
-  06-rom-space.md          如何安全腾出 ROM 空间
-  07-sync-fix.md           修复 C00D11CD 同步错误
-  08-reproduction.md       完整复现步骤
-  09-lessons-learned.md    所有失败尝试与原因
-  10-publishing-checklist.md  去敏与发布检查清单
-  ACKNOWLEDGEMENTS.md      详细致谢（中英）
+  tutorial.md / tutorial.zh-CN.md   ★ 分步教程，从这里开始
+  01-background.md              硬件、启动链、三层保护
+  02-lax-bootloader.md          1.0 TEST 启动器为何是关键
+  03-nor-vault-backup.md        不拆芯片备份 NOR/vault
+  04-auth196.md                 让 3.3 跑在旧 vault 上
+  05-font-mechanism.md          3.3 的文字/字体机制（含更正声明）
+  06-rom-space.md               ROM 替换方案（备选）
+  07-sync-fix.md                修复 C00D11CD 同步错误
+  08-reproduction.md            精简复现清单
+  09-lessons-learned.md         所有失败尝试，以及我们下过的错误结论
+  10-publishing-checklist.md    去敏与发布检查清单
+  ACKNOWLEDGEMENTS.md           详细致谢（中英）
 scripts/
-  build_cjk_font.py        子集化 + 去 hinting + 改名 + 体积校验
-  patch_nk.py              版本补丁 + skin 压缩 + 字体注入 + 容器重建
-  write_device.ps1         系统分区安全写入（重试 + 哈希校验）
-NOTICE.md                  法律声明与致谢
+  build_cjk_font.py             子集化 + 去 hinting + 改名 + CE-LZX 体积校验
+  patch_loader.py               改写加载器的字体大小常量
+  build_image.py                FontLink 注册表 + 版本串 + 原地替换 FDF + 重建容器
+  write_device.ps1              系统分区安全写入
+assets/                         已打码截图
 ```
 
----
+## 快速开始
 
-## 快速复现（概要）
+```powershell
+# 0. 先备份 F:\、G:\zunedb.dat、G:\zunedb.BAK、G:\drmStore.dat，并 dump NOR/vault
+# 1. 安装 1.0 TEST 启动器（不可逆，见 docs/02）
 
-需要：Zune 30、ZIF 转 USB 适配器、一台 **1.0 TEST** 设备（或能装 TEST EBoot 的途径）、
-你自己合法持有的官方 3.3 `KeelBaseline.cab`、以及你有权使用的中文 TTF。
+# 2. 构建 AUTH196
+python <research>\tools\upgrade\build_upgrade.py --stock-nk ... --legacy-vault ...
 
-1. **完整备份** —— NOR、vault、硬盘前 1 MB、`nk.bin`（见 `docs/03`）；
-2. 安装 1.0 TEST 启动器（见 `docs/02`）；
-3. 用你自己的 3.3 `nk.bin` + vault 构建 AUTH196（见 `docs/04`）；
-4. 用 `scripts/build_cjk_font.py` 生成 CJK 字体子集；
-5. 用 `scripts/patch_nk.py` 组装镜像（版本补丁 + skin 压缩 + 字体注入）；
-6. 用 `scripts/write_device.ps1` 写入系统分区，开机。
+# 3. 生成字体
+python scripts\build_cjk_font.py --font your.ttf --charset charset.txt ^
+    --limit 4000000 --family "Zune UI CJK" --out font.ttf --out-packed font.packed.bin
 
-详细步骤见 `docs/08-reproduction.md`。
+# 4. 改加载器尺寸
+python scripts\patch_loader.py --in <research>\artifacts\ZCJKBoot.exe ^
+    --size <字体字节数> --out ZCJKBoot.exe
 
----
+# 5. 构建镜像
+python scripts\build_image.py --research-dir <research> ^
+    --base nk.AUTH196.bin --fdf-in default.fdf --out nk.CJK.bin
+
+# 6. 写入设备
+powershell -ExecutionPolicy Bypass -File scripts\write_device.ps1 -Image nk.CJK.bin
+```
+
+详细步骤、验证点、故障排查见 `docs/tutorial.zh-CN.md`。
+
+## 已验证 / 未验证
+
+| 结论 | 状态 |
+|---|---|
+| 官方 3.3 上显示中日文，英文保持 Zegoe | ✅ 真机验证 |
+| GB2312 子集（8,011 字形，1.9 MB）可加载显示 | ✅ 真机验证 |
+| 修改后 Zune 4.8 同步正常 | ✅ 真机验证（恢复 zunedb/drmStore 后） |
+| AUTH196 + 3.3 在 1.0 TEST 时代 vault 上启动 | ✅ 真机验证 |
+| GBK / 完整字体（14 MB+） | ⚠️ 未测，内存上限未知 |
+| 菜单汉化 | ❌ 未尝试 |
+| FLAC 播放 | ❌ 未尝试（上游声称有解码器 DLL，未分发） |
+| 不依赖 Zune 软件传歌 | ❌ 已测试，被设备的 MTP 实现拒绝 |
 
 ## 注意事项
 
-* **含设备身份的产物不要外传**（AUTH196 内含你的加密 vault）。
-* **字体版权**：宋体 / MS Gothic / Gulim 都是商业字体，本仓库不含字体数据，
-  请用你自己持有的字体生成子集。
-* **变砖风险**：这是对 20 年旧设备的固件手术。宽松启动器让恢复变简单（重写 `nk.bin` 即可），
-  但并非零风险。
-* **同步会坏，而且可以预防。** 一次启动失败就会格式化系统分区；运行过 1.0 TEST 会重写数据
-  分区的媒体库，导致 Zune 客户端同步报 C00D11CD。**刷机前请先把 G:\zunedb.dat、
-  G:\zunedb.BAK、G:\drmStore.dat 复制到电脑。** 详见 docs/07-sync-fix.md。
-* **绝不能让 Zune 软件"还原"设备。**
-* `Acs_*.hex`（FM 收音机固件）和两个 `zdkscenes*.gem` 槽位被用作字体存储，
-  因此收音机固件更新与 ZDK 示例场景不可用（Zune 的 FM/Wi-Fi 服务本身早已停摆）。
-* 字库目前 1,050 个汉字，生僻字仍会显示方框。
-
----
+* **含设备身份的产物不要外传**（AUTH196 内含你的加密 vault）；
+* **字体版权**：用你自己持有的字体生成子集，本仓库不含字体数据；
+* **换启动器不可逆**：保管好 `F:\EBoot.bin`，永远不要让 Zune 软件"还原"设备；
+* **同步会坏，而且可以预防**：刷机前先复制 `G:\zunedb.dat`、`G:\zunedb.BAK`、`G:\drmStore.dat`（见 `docs/07`）；
+* 目前只覆盖 GB2312，生僻字仍会方框；
+* 本仓库不含任何微软固件、字体、密钥或设备专属文件。
 
 ## 致谢
 
-* [`1977899016-cell/zune30-research`](https://github.com/1977899016-cell/zune30-research)：
-  AUTH196 构建器、CE BIN/LZX 工具链、ROM 文件表知识——没有它就没有这一切。
-* 2009 年 Zune 中文社区（贴吧）：证明 CJK 可行的 1.0 TEST / 1.4 方案。
-* `ZuneDev` / Project Lyra：Zune 保存工作的先行者。
+完整清单见 **[docs/ACKNOWLEDGEMENTS.md](docs/ACKNOWLEDGEMENTS.md)**。
+
+`1977899016-cell/zune30-research`（AUTH196、CE 工具链、加载器）· **ahlanchuck**（固件替换文档）·
+2009 年百度贴吧 `zune吧` 中文先驱 · **正直RM**（固件谱系与软件归档）· archive.org 保存者 ·
+ZuneDev / Project Lyra · libmtp / kbhomes · fontTools、keystone、comtypes、mutagen。
+
+## 隐私
+
+截图已打码（设备昵称与专辑封面模糊处理），仓库内不含序列号、本机路径或个人信息。
+检查清单见 `docs/10-publishing-checklist.md`。
 
 ## 许可
 
-文档与脚本：MIT。
-不含任何微软二进制、字体文件或设备专属产物。
-
----
-
-*本项目是对本人合法持有硬件的保存与互操作性研究，不分发任何受版权保护的固件或字体。*
+文档与脚本：MIT。不含微软二进制、字体或设备专属产物。

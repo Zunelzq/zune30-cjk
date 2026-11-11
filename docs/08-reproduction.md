@@ -1,3 +1,5 @@
+> **This page is a condensed checklist. For the full step-by-step guide see** 	utorial.md **/** 	utorial.zh-CN.md\
+\
 # 08 — Full reproduction
 
 This is the exact sequence that produced a working device. Read `09-lessons-learned.md`

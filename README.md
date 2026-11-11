@@ -1,18 +1,36 @@
-# Zune 30 (Keel) — Native CJK on official 3.3 firmware
+# Zune 30 (Keel) — native CJK on official 3.3 firmware
 
-**Status: working. Verified on real hardware (i.MX31 Zune 30, 30 GB).**
+**Status: working, verified on real hardware.**
 
-A first-generation Zune 30 running the *official* Zune **3.3 (39)** firmware now renders
-Chinese and Japanese text natively — device name, song titles, artist names, all of it.
+> ## This project stands on someone else's shoulders
+>
+> The method, the tooling and the hard-won knowledge come from
+> **[`1977899016-cell/zune30-research`](https://github.com/1977899016-cell/zune30-research)**:
+> the AUTH196 image builder, the CE BIN/LZX toolchain, the `default.fdf` registry editor, the
+> native font loader (`ZCJKBoot.exe`) and the FontLink approach itself.
+>
+> Our contribution is smaller than theirs:
+> 1. we followed their recipe, **found three configuration mistakes that made it fail on our
+>    unit**, fixed them, and documented exactly what they were;
+> 2. we **unlocked the loader's hard-coded 8,206,424-byte size check**, so arbitrary font
+>    sizes work (GB2312 instead of a fixed 8 MB face);
+> 3. we filled in the steps they deliberately leave out — image assembly, the firmware
+>    version string, and the `C00D11CD` sync repair — as reproducible scripts.
+>
+> If you use anything here, star their repository first.
+
+A first-generation Zune 30 (30 GB) running **official Zune 3.3 (39)** now renders Chinese and
+Japanese text natively.
 
 | What | Before | After |
 |---|---|---|
-| Device name | `Zune□□□` | `Zune示例名` |
-| Song title | `□□□□` | `巨大少女` |
+| Device name | `Zune□□□` | Chinese characters |
+| Chinese title | `□□□□` | `巨大少女` |
 | Japanese title | `□□□□` | `そらのおとしもの ～エターナル・イ...` |
 | Artist | `□□, □□□` | `40mP, 初音ミク` |
+| Latin UI | Zegoe | **still Zegoe** (FontLink only fills missing glyphs) |
 
-| Boot (device name) | Main menu |
+| Boot | Main menu |
 |---|---|
 | ![boot](assets/01-boot-device-name-redacted.jpg) | ![menu](assets/02-main-menu.jpg) |
 
@@ -20,165 +38,125 @@ Chinese and Japanese text natively — device name, song titles, artist names, a
 |---|---|
 | ![jp](assets/03-now-playing-jp-redacted.jpg) | ![cn](assets/04-now-playing-cn-redacted.jpg) |
 
-This is, as far as public documentation goes, not something that had been done before:
-
-* The 2009 Chinese-community hack reached CJK only on **1.0 TEST / 1.4** firmware.
-* `zune30-research` explicitly stopped at a *bootable* 3.3 and states in its README that
-  the 3.3 compatibility image does **not** include Chinese.
-
-This repository documents how it works and how to reproduce it — scripts and analysis
-only, **no Microsoft firmware and no licensed fonts are distributed here**.
+**Start here → [`docs/tutorial.md`](docs/tutorial.md)** (English) ·
+**[`docs/tutorial.zh-CN.md`](docs/tutorial.zh-CN.md)** (中文教程，步骤更细)
 
 ---
 
-## TL;DR — the actual trick
+## How it works, in one paragraph
 
-The Zune 3.3 shell (`gemstone.exe`) does not use GDI text fallback. It loads its UI fonts
-**directly from three ROM files**:
+Zune 3.3's shell draws text through the system GDI. GDI has **FontLink**: when the primary
+face (`Zegoe UI`, `Zegoe UI Light`, `Zegoe UI Semibold` — all in ROM) lacks a glyph, it can
+pull it from a second font. So we register a CJK font as the fallback, and load it before the
+shell starts with a tiny native program. Latin stays Zegoe, CJK comes from our font.
 
-```
-\Windows\ZegoeUI.ttf        (regular)
-\Windows\ZegoeUI_L.ttf      (light)
-\Windows\ZegoeUI_SB.ttf     (semibold — the default face)
-```
+The prerequisites are the interesting part:
 
-So the only way to change what 3.3 renders is to **replace the contents of those ROM files
-with a font that contains CJK glyphs**.
+* a **1.0 TEST bootloader** in NOR, because the retail EBoot verifies `nk.bin`;
+* an **AUTH196** image, because 3.3 refuses to boot on a 1.0-era vault;
+* the font must live on `\Hard Disk` — which is the **150 MB system partition**, not the big
+  data partition (we got this wrong for hours);
+* the registry value must use the font's **exact internal family name**;
+* the loader checks `GetFileSize` against a hard-coded constant, which has to be patched to
+  match your font.
 
-The catch: ROM has ~36 KB of free space and a full CJK font is hundreds of KB.
-The solution: **compress `skin_default.gem` in place** (464 KB → 334 KB), which frees a
-contiguous 130 KB tail, and extend that region over two unused `zdkscenes*.gem` slots —
-163–180 KB of contiguous space for a hint-free CJK subset.
-
-Everything else (registry `Zune\Fonts\*` locators, GDI `FontLink`, fallback fonts, boot-time
-font loaders) was tried and **does not work on 3.3**. See `docs/lessons-learned.md`.
-
----
-
-## Prerequisite: a bootloader that accepts modified images
-
-Retail 3.3 EBoot verifies the `nk.bin` signature (MinCrypt + HAB). Any change to `nk.bin`
-results in a refusal or a full format of the 150 MB system partition.
-
-The unlock is the **1.0 TEST bootloader** (`EBoot`, sha256 prefix `11D94DE4…`, reports
-`Bootloader 2`). It is signed with a key the production eFuses accept, and it does **not**
-verify `nk.bin`. Once it is in NOR, arbitrary `nk.bin` images boot.
-
-> ⚠️ This is the single most important asset. If it is ever replaced by a retail EBoot
-> you cannot put it back: EBoot lives in NOR and HAB checks its signature on every boot.
-> **Never let the Zune software "restore/repair" the device.**
-
-See `docs/02-lax-bootloader.md` for how it was obtained and installed.
-
----
-
-## Firmware layout (what we actually build)
-
-```
-nk.bin (B000FF container, 110 records, base 0x88200000, ram_start 0x88f90000)
- ├── official 3.3 image                    (from the user's own KeelBaseline.cab)
- ├── AUTH196 patch                         (re-wrap the legacy vault at boot)
- ├── firmware version string patch         (0x7cda6c: force 03.30.00039.00-00435)
- ├── skin_default.gem                      (compressed in place, flags |= 0x800)
- └── ZegoeUI*.ttf entries                  (all three point at one CJK TTF, compressed)
-```
-
-* `AUTH196` is built offline with the public `zune30-research` tooling from the owner's own
-  NOR/vault backup. It is device-specific and must never be published.
-* The CJK font is a **hint-free TrueType subset** (ASCII + kana + N most-frequent Han
-  characters from the owner's library), renamed to `Zegoe UI Semibold`, CE-LZX compressed
-  with **4096-byte blocks** (the CE decoder rejects other block sizes).
-
-Sizes measured on hardware:
-
-| Item | Value |
-|---|---|
-| ROM image span | 13,956,899 B |
-| Free ROM tail | 36,496 B |
-| Zegoe slots (contiguous) | 112,948 B |
-| skin_default.gem | 464,259 → 333,565 B |
-| Contiguous space used for font | 163,325 B (950 chars) / 180,776 B (1,050 chars) |
-| Font, hint-free, 1,050 Han + kana + ASCII | 231,240 B → 177,460 B compressed |
+A different, ROM-level approach (replace the three `ZegoeUI*.ttf` files instead) also works
+and is documented in [`docs/06-rom-space.md`](docs/06-rom-space.md) — it is the only option if
+you cannot run a startup program, but it costs you the original Latin face.
 
 ---
 
 ## Repository layout
 
 ```
-README.md                  this file
-README.zh-CN.md            中文说明
+README.md / README.zh-CN.md     overview (this file)
+NOTICE.md                       legal scope, de-identification, credits
 docs/
-  01-background.md         Zune 30 hardware, boot chain, protection layers
-  02-lax-bootloader.md     the 1.0 TEST bootloader and why it matters
-  03-nor-vault-backup.md   dumping NOR/vault without desoldering
-  04-auth196.md            bootable 3.3 on a legacy vault
-  05-font-mechanism.md     how gemstone loads fonts (the core discovery)
-  06-rom-space.md          freeing contiguous ROM space safely
-  07-sync-fix.md           fixing C00D11CD after firmware surgery
-  08-reproduction.md       step-by-step tutorial
-  09-lessons-learned.md    everything that did NOT work, and why
-  10-publishing-checklist.md  privacy / de-identification / publication checklist
-  ACKNOWLEDGEMENTS.md      itemised credits
+  tutorial.md / tutorial.zh-CN.md   ★ step-by-step, start here
+  01-background.md              hardware, boot chain, protection layers
+  02-lax-bootloader.md          the 1.0 TEST bootloader and why it matters
+  03-nor-vault-backup.md        dumping NOR/vault without desoldering
+  04-auth196.md                 bootable 3.3 on a legacy vault
+  05-font-mechanism.md          how text/fonts work on 3.3 (with a correction notice)
+  06-rom-space.md               the ROM-replacement alternative
+  07-sync-fix.md                fixing C00D11CD after firmware surgery
+  08-reproduction.md            condensed reproduction checklist
+  09-lessons-learned.md         everything that did NOT work, and the wrong conclusion we drew
+  10-publishing-checklist.md    de-identification / publication checklist
+  ACKNOWLEDGEMENTS.md           itemised credits (EN + 中文)
 scripts/
-  build_cjk_font.py        subset + hint-strip + rename + CE-LZX size check
-  patch_nk.py              version patch, skin compression, font injection, container rebuild
-  write_device.ps1         safe writer for the 150 MB system partition (retry + hash verify)
-NOTICE.md                  legal / no binaries / credits
+  build_cjk_font.py             subset + strip hints + rename + CE-LZX size check
+  patch_loader.py               rewrite the loader's font-size constant
+  build_image.py                FontLink registry + version string + in-place FDF + container
+  write_device.ps1              safe writer for the 150 MB system partition
+assets/                         redacted screenshots
 ```
 
----
+## Quick start
 
-## Quick reproduction (high level)
+```powershell
+# 0. back up F:\, G:\zunedb.dat, G:\zunedb.BAK, G:\drmStore.dat, and dump NOR/vault
+# 1. install the 1.0 TEST bootloader (irreversible, see docs/02)
 
-You need: a Zune 30, a ZIF-to-USB adapter, a **1.0 TEST** unit (or a way to install the
-TEST EBoot), your own official 3.3 `KeelBaseline.cab`, and a TTF with CJK glyphs you are
-licensed to use.
+# 2. AUTH196
+python <research>\tools\upgrade\build_upgrade.py --stock-nk ... --legacy-vault ...
 
-1. **Back up everything** — NOR, vault, disk prefix, `nk.bin` (see `docs/03`).
-2. Install the 1.0 TEST bootloader (see `docs/02`).
-3. Build `AUTH196` from your own 3.3 `nk.bin` + your own vault (`docs/04`).
-4. Build a CJK font subset with `scripts/build_cjk_font.py`.
-5. Assemble the image with `scripts/patch_nk.py` (version patch + skin compression + font).
-6. Write it to the system partition with `scripts/write_device.ps1`, boot, enjoy.
+# 3. font
+python scripts\build_cjk_font.py --font your.ttf --charset charset.txt ^
+    --limit 4000000 --family "Zune UI CJK" --out font.ttf --out-packed font.packed.bin
 
-Full detail: `docs/08-reproduction.md`.
+# 4. loader
+python scripts\patch_loader.py --in <research>\artifacts\ZCJKBoot.exe ^
+    --size <font bytes> --out ZCJKBoot.exe
 
----
+# 5. image
+python scripts\build_image.py --research-dir <research> ^
+    --base nk.AUTH196.bin --fdf-in default.fdf --out nk.CJK.bin
+
+# 6. write
+powershell -ExecutionPolicy Bypass -File scripts\write_device.ps1 -Image nk.CJK.bin
+```
+
+Detailed steps, verification points and troubleshooting: `docs/tutorial.md`.
+
+## What is verified vs. not
+
+| Claim | Status |
+|---|---|
+| CJK renders on official 3.3, Latin stays Zegoe | ✅ verified on hardware |
+| GB2312 subset (8,011 glyphs, 1.9 MB) loads and renders | ✅ verified |
+| Zune 4.8 sync works after the modification | ✅ verified (after restoring `zunedb.dat` / `drmStore.dat`) |
+| Booting AUTH196 + 3.3 on a 1.0-TEST-era vault | ✅ verified |
+| GBK / full font (14 MB+) | ⚠️ untested — memory limits unknown |
+| Menu translation | ❌ not attempted |
+| FLAC playback | ❌ not attempted (upstream claims a decoder DLL, not distributed) |
+| Adding songs without the Zune client | ❌ tested and rejected by the device's MTP implementation |
 
 ## Caveats
 
-* **Device-specific artifacts.** `AUTH196` embeds your encrypted vault. Never share it.
-* **Font licensing.** SimSun / MS Gothic / Gulim are commercial fonts. This repo contains
-  no font data; build your subset from a font you own.
-* **Brick risk.** Everything here is firmware surgery on a 20-year-old device. The lax
-  bootloader makes recovery easy (rewrite `nk.bin`) but it is not risk-free.
-* **Sync can break — and it is preventable.** A failed boot formats the system partition,
-  and running the 1.0 TEST firmware rewrites the data partition's media library, so the
-  Zune client stops syncing (C00D11CD). **Before the first flash, copy
-  G:\zunedb.dat, G:\zunedb.BAK and G:\drmStore.dat to your PC.** Details:
-  docs/07-sync-fix.md.
-* **Zune software must never "restore" the device.**
-* `Acs_*.hex` (FM radio firmware) and the two `zdkscenes*.gem` slots are repurposed as font
-  storage; radio firmware update and ZDK sample scenes are therefore unavailable.
-* FM radio / Wi-Fi on Zune 30 depend on dead services anyway.
-
----
+* **Device-specific artifacts.** AUTH196 embeds your encrypted vault. Never publish it.
+* **Font licensing.** Build your own subset from a font you own. Nothing here ships font data.
+* **Irreversible bootloader step.** Keep `F:\EBoot.bin` (the TEST loader) safe, and never let
+  the Zune software "restore" the device.
+* **Sync can break — and it is preventable.** Before flashing, copy `G:\zunedb.dat`,
+  `G:\zunedb.BAK` and `G:\drmStore.dat` to your PC. Details: `docs/07-sync-fix.md`.
+* GB2312 coverage only; rare characters box out.
+* No Microsoft firmware, fonts, keys or device-specific files are distributed here.
 
 ## Credits
 
-* [`1977899016-cell/zune30-research`](https://github.com/1977899016-cell/zune30-research) —
-  AUTH196 builder, CE BIN/LZX tooling, ROM file-table knowledge. Without it none of this
-  would have been possible.
-* The 2009 Chinese Zune community (tieba) — the 1.0 TEST/1.4 font method that showed CJK was
-  possible at all.
-* `ZuneDev` / Project Lyra — general Zune preservation work.
+Full itemised list: **[docs/ACKNOWLEDGEMENTS.md](docs/ACKNOWLEDGEMENTS.md)**.
+
+`1977899016-cell/zune30-research` (AUTH196, CE tooling, loader) · **ahlanchuck** (firmware
+swapping document) · the 2009 Baidu Tieba `zune吧` community (CJK was possible at all) ·
+**正直RM** (firmware history, software archive) · archive.org preservation uploaders ·
+ZuneDev / Project Lyra · libmtp / kbhome · fontTools, keystone, comtypes, mutagen.
+
+## Privacy
+
+Screenshots are redacted (device nickname and album art blurred); no serial numbers, local
+paths or personal data appear anywhere. Checklist: `docs/10-publishing-checklist.md`.
 
 ## License
 
-Documentation and scripts: MIT.
-No Microsoft binaries, no font binaries, no device-specific output.
-
----
-
-*This project is preservation and interoperability research on hardware its owner legally
-possesses. It distributes no copyrighted firmware or fonts.*
+Documentation and scripts: MIT. No Microsoft binaries, no fonts, no device-specific output.

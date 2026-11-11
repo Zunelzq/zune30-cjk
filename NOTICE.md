@@ -1,5 +1,15 @@
 # NOTICE — legal scope, de-identification, credits
 
+## 0. Relationship to upstream
+
+This repository is a **follow-up** to
+[1977899016-cell/zune30-research](https://github.com/1977899016-cell/zune30-research), not an
+independent invention. The AUTH196 builder, the CE BIN/LZX tooling, the registry (FDF) editor,
+the native font loader and the FontLink approach are that project's work, used here under MIT.
+
+What is original to this repository: three corrected configuration mistakes, the loader
+size-constant patch, the in-place image assembler, the firmware version-string patch, the
+C00D11CD sync repair, and the documentation/tutorials.
 ## 1. What this repository contains
 
 Documentation and original scripts only. It deliberately contains **none** of:
