@@ -77,6 +77,8 @@ docs/
   09-lessons-learned.md         所有失败尝试，以及我们下过的错误结论
   10-publishing-checklist.md    去敏与发布检查清单
   11-downgrade.md               3.3 降回 1.0 TEST 的流程与代价
+  12-mtpz-protocol.md           MTPZ 协议实测（操作码、握手、重放结论）
+  13-field-notes.md             工程札记：硬件、固件、工具链、方法论
   ACKNOWLEDGEMENTS.md           详细致谢（中英）
 scripts/
   build_cjk_font.py             子集化 + 去 hinting + 改名 + CE-LZX 体积校验
