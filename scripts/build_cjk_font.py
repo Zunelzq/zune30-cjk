@@ -91,13 +91,18 @@ def ce_lzx_verify(packed: bytes, data: bytes, decompressor_dir: Path) -> bool:
 
 
 # ---------------------------------------------------------------- font subsetting
-def build_font(font_path: Path, chars: set[str], family: str) -> bytes:
+def build_font(font_path: Path, chars: set[str], family: str, keep_hinting: bool = False) -> bytes:
     from fontTools import subset
     from fontTools.ttLib import TTFont
 
     opts = subset.Options()
-    opts.hinting = False                      # hints are dead weight for this budget
-    opts.drop_tables += ["GSUB", "kern", "vhea", "vmtx", "cvt ", "fpgm", "prep", "gasp"]
+    # Hinting is what makes small CJK text look sharp on the device. It roughly doubles
+    # the file size, which does not matter on the FontLink path (the font lives on disk),
+    # but does matter on the ROM-replacement path (see docs/06-rom-space.md).
+    opts.hinting = keep_hinting
+    opts.drop_tables += ["GSUB", "kern", "vhea", "vmtx"]
+    if not keep_hinting:
+        opts.drop_tables += ["cvt ", "fpgm", "prep", "gasp"]
 
     font = subset.load_font(str(font_path), opts)
     subsetter = subset.Subsetter(options=opts)
@@ -136,6 +141,8 @@ def main() -> int:
     ap.add_argument("--font", type=Path, required=True, help="source TTF/OTF you are licensed to use")
     ap.add_argument("--charset", type=Path, help="UTF-8 text with the Han characters you need")
     ap.add_argument("--limit", type=int, default=180600, help="max compressed size in bytes")
+    ap.add_argument("--keep-hinting", action="store_true",
+                    help="keep TrueType hinting (sharper small text, ~2x size; use this on the FontLink path)")
     ap.add_argument("--family", default="Zegoe UI Semibold", help="family name to embed")
     ap.add_argument("--out", type=Path, required=True, help="uncompressed TTF output")
     ap.add_argument("--out-packed", type=Path, required=True, help="CE-LZX compressed output")
@@ -147,7 +154,7 @@ def main() -> int:
     if args.charset:
         chars |= set(args.charset.read_text(encoding="utf-8"))
 
-    ttf = build_font(args.font, chars, args.family)
+    ttf = build_font(args.font, chars, args.family, keep_hinting=args.keep_hinting)
     packed = ce_lzx_encode(ttf, args.makecab)
 
     size_ok = len(packed) <= args.limit

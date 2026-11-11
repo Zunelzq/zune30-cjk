@@ -87,3 +87,21 @@ With those three fixed, Chinese appears with the original Zegoe Latin.
 * FontLink only helps for glyphs missing from the primary face; it does not change line
   breaking or text shaping.
 * Menu labels are English strings in `strings.gem`; FontLink does not translate them.
+## Hinting matters more than you expect
+
+Our first GB2312 subset was built **without** hinting (1,945,600 B). It worked, but small
+characters looked blurry: without hinting the rasteriser just scales the outline, so strokes
+fall between pixels.
+
+Rebuilding the same 8,011 glyphs **with** hinting gives 3,359,056 B and 7,391 hinted glyphs
+(`fpgm` / `prep` / `cvt` present). On the FontLink path the size is irrelevant — the font
+lives on the data volume, not in ROM — and the text looks like the 1.0 TEST firmware again,
+which is what people remember as "the good font".
+
+``
+python scripts/build_cjk_font.py --font simsun.ttf --charset charset.txt ^
+    --keep-hinting --family "Zune UI CJK" --out font.ttf --out-packed font.packed.bin
+``
+
+Rule of thumb: **FontLink → keep hinting. ROM replacement → strip it** (the ROM slot is small,
+see `06-rom-space.md`).

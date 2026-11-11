@@ -90,16 +90,20 @@ Extract and decompress `default.fdf` from the AUTH196 image (upstream `ce_bin.py
 
 ```powershell
 python scripts\build_cjk_font.py --font <your-font.ttf> --charset charset.txt `
-  --limit 4000000 --family "Zune UI CJK" `
+  --limit 4000000 --family "Zune UI CJK" --keep-hinting `
   --out out\font.ttf --out-packed out\font.packed.bin
 ```
 
 Measured configurations:
 
-| Character set | Glyphs | Size |
-|---|---|---|
-| library + kana + ASCII | 1,819 | 379 KB |
-| **GB2312 + library + kana** | **8,011** | **1.9 MB** |
+| Character set | Glyphs | Size | Hinting |
+|---|---|---|---|
+| library + kana + ASCII | 1,819 | 379 KB | off |
+| **GB2312 + library + kana** | **8,011** | **1.9 MB** | off |
+| **GB2312 + library + kana** | **8,011** | **3.2 MB** | **on** (recommended: much sharper small text) |
+
+> On the FontLink path the font lives on the data volume, so size is cheap — keep hinting.
+> Strip it only when you are squeezing the font into ROM (`06-rom-space.md`).
 
 Copy the result to the device as `F:\Fonts\ZuneCJK_UI_20261027.ttf`
 (`\Hard Disk` is the **system** partition, i.e. `F:`).
