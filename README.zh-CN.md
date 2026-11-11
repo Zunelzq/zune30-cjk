@@ -120,6 +120,7 @@ powershell -ExecutionPolicy Bypass -File scripts\write_device.ps1 -Image nk.CJK.
 | 官方 3.3 上显示中日文，英文保持 Zegoe | ✅ 真机验证 |
 | GB2312 子集（8,011 字形，1.9 MB）可加载显示 | ✅ 真机验证 |
 | 修改后 Zune 4.8 同步正常 | ✅ 真机验证（恢复 zunedb/drmStore 后） |
+| Windows 11 上 WMA 同步（全部报 `C00D11CD / 80004002`） | ✅ 已修复：补回 Windows 不再提供的 WMDRM 组件，见 `docs/07-sync-fix.md` |
 | AUTH196 + 3.3 在 1.0 TEST 时代 vault 上启动 | ✅ 真机验证 |
 | GBK / 完整字体（14 MB+） | ⚠️ 未测，内存上限未知 |
 | 菜单汉化 | ❌ 未尝试 |

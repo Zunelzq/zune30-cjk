@@ -104,3 +104,81 @@ nothing, but it is a cheap step that eliminates the client side.
 You will not get the same relationship back. Options: borrow an untouched device to
 donate a matching data partition (only works if the vault/cert state matches), or accept a
 device without sync.
+
+---
+
+## C00D11CD (80004002) when the failing items are all WMA — Windows removed WMDRM
+
+This is a **different** failure from the one above, and it is not caused by any firmware
+modification. Verified on Windows 11 26H2 (build 26300) in November 2026.
+
+### Symptoms
+
+* MP3 files sync fine; **every WMA file fails** (standard WMA *and* WMA Lossless);
+* the failed items are listed with a warning icon, and clicking one shows
+  `无法同步 / 出现未知错误 / C00D11CD (80004002)`;
+* the sync page shows `正在转换 …` ("converting…") for those files;
+* the transcode cache directory (`%LOCALAPPDATA%`-configured, in our case `E:\zune\zhuanhuan`)
+  **stays empty** — no conversion has ever completed;
+* conversion settings are already correct (`仅转换设备不支持的媒体文件`).
+
+### Root cause
+
+`80004002` is `E_NOINTERFACE`. Zune 4.8 encrypts WMA content for the device through
+**WMDRM**; its binaries reference `wmdrmdev.dll`, `wmdrmnet.dll`, `wmdrmsdk.dll`,
+`WMCreateDRMTranscryptorPriv` and `WMCreateDRMTranscryptionManagerPriv`.
+
+Modern Windows 11 no longer ships those libraries — instead there is a component named
+`amd64_microsoft-windows-wmdrmsdk-stub` (a 28 KB placeholder, owner `TrustedInstaller`) and
+**no** `wmdrmdev.dll` / `wmdrmnet.dll`. Zune asks COM for the WMDRM interface, gets
+`E_NOINTERFACE`, and reports the generic `C00D11CD`.
+
+### Fix (verified working)
+
+Take the five DLLs from a **Windows 7 / 8.1 installation you own** (their `System32`, x64):
+
+```
+wmdrmdev.dll
+wmdrmnet.dll
+wmdrmsdk.dll      (the real one, ~780 KB — not the 28 KB stub)
+drmv2clt.dll
+drmmgrtn.dll
+```
+
+Then, as administrator:
+
+1. copy the first four into `C:\Windows\System32\`;
+2. back up the stub:
+   `copy C:\Windows\System32\wmdrmsdk.dll <backup>\wmdrmsdk.stub.dll`;
+3. stop all Zune processes (the stub is loaded by `Zune.exe`);
+4. take ownership and replace:
+   `takeown /f C:\Windows\System32\wmdrmsdk.dll /a`
+   `icacls C:\Windows\System32\wmdrmsdk.dll /grant Administrators:F`
+   `copy /y wmdrmsdk.dll C:\Windows\System32\`;
+5. register all five: `regsvr32 /s C:\Windows\System32\<dll>`;
+6. restart Zune, connect the device, sync a WMA file.
+
+Success indicators: `Zune.exe` loads `WMDRMSDK.DLL` (version `11.0.7601.x`), the device's used
+space grows while syncing WMA, and no `C00D11CD` dialog appears.
+
+### Rollback
+
+Stop Zune, restore `wmdrmsdk.dll` from the backup, delete the four added DLLs, reboot.
+
+> **Licensing:** these DLLs are Microsoft binaries. Do not redistribute them. Every user has
+> to extract them from their own Windows installation.
+
+### Why this is not a firmware problem
+
+We compared the CE registry (`default.fdf`) of the official 3.3 image and our modified image:
+1,900 keys in both, **0 keys lost**, 1 added (`FontLink\SystemLink`) — see `05-font-mechanism.md`.
+The device's format support is unchanged; the failure is entirely on the PC side.
+
+### If you cannot source the DLLs
+
+Two workarounds:
+
+1. sync the WMA files from a Windows 7/8.1 machine (its Zune install still has WMDRM);
+2. convert the WMA files to MP3 yourself (e.g. `ffmpeg -i in.wma -c:a libmp3lame -b:a 320k out.mp3`);
+   MP3 sync does not need WMDRM.
+

@@ -129,6 +129,7 @@ Detailed steps, verification points and troubleshooting: `docs/tutorial.md`.
 | CJK renders on official 3.3, Latin stays Zegoe | ✅ verified on hardware |
 | GB2312 subset (8,011 glyphs, 1.9 MB) loads and renders | ✅ verified |
 | Zune 4.8 sync works after the modification | ✅ verified (after restoring `zunedb.dat` / `drmStore.dat`) |
+| WMA sync on Windows 11 (all WMA failed with `C00D11CD / 80004002`) | ✅ fixed by restoring the WMDRM DLLs Windows no longer ships — see `docs/07-sync-fix.md` |
 | Booting AUTH196 + 3.3 on a 1.0-TEST-era vault | ✅ verified |
 | GBK / full font (14 MB+) | ⚠️ untested — memory limits unknown |
 | Menu translation | ❌ not attempted |
