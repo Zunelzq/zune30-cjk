@@ -1,0 +1,10 @@
+﻿# never commit device-specific or copyrighted artifacts
+*.bin
+*.cab
+*.ttf
+*.ttc
+*.PRIVATE.bin
+backup/
+out/
+__pycache__/
+*.pyc
