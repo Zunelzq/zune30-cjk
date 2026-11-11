@@ -287,3 +287,9 @@ G:\drmStore.dat
 - **ahlanchuck**《Firmware Swapping on Zune 30 (Keel) Models》：讲清了 EBoot/恢复镜像的刷写与验签；
 - **2009 年百度贴吧 `zune吧`** 的中文先驱：证明 CJK 可行；
 - **archive.org** 的保存者、**ZuneDev / Project Lyra**、**libmtp** 等。
+
+---
+
+## 回退
+
+如果想退回 1.0 TEST，见 [11-downgrade.md](11-downgrade.md)：流程、预期现象、以及它会破坏哪些数据。

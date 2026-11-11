@@ -15,7 +15,9 @@
 > 2. we **unlocked the loader's hard-coded 8,206,424-byte size check**, so arbitrary font
 >    sizes work (GB2312 instead of a fixed 8 MB face);
 > 3. we filled in the steps they deliberately leave out — image assembly, the firmware
->    version string, and the `C00D11CD` sync repair — as reproducible scripts.
+>    version string, and the `C00D11CD` sync repair — as reproducible scripts;
+> 4. we documented the **downgrade path** (3.3 back to 1.0 TEST), what it costs, and how to
+>    come back — upstream treats the same action only as an internal recovery step.
 >
 > If you use anything here, star their repository first.
 
@@ -83,6 +85,7 @@ docs/
   08-reproduction.md            condensed reproduction checklist
   09-lessons-learned.md         everything that did NOT work, and the wrong conclusion we drew
   10-publishing-checklist.md    de-identification / publication checklist
+  11-downgrade.md               3.3 → 1.0 TEST downgrade, and what it costs
   ACKNOWLEDGEMENTS.md           itemised credits (EN + 中文)
 scripts/
   build_cjk_font.py             subset + strip hints + rename + CE-LZX size check

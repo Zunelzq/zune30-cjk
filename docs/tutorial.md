@@ -178,3 +178,9 @@ The three FontLink checks:
 * menus stay English (`strings.gem` is not touched).
 * the bootloader swap is irreversible; backup is not optional.
 * no Microsoft firmware, fonts or device-specific files are distributed here.
+
+---
+
+## Rolling back
+
+If you want to return to 1.0 TEST, see [11-downgrade.md](11-downgrade.md): procedure, expected behaviour, and what data it breaks.
