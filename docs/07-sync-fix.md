@@ -1,5 +1,28 @@
 # 07 — Making the Zune client sync again after firmware surgery
 
+> **Read this before you flash anything.** This failure is caused by the modification
+> process itself, and it is 100% preventable by backing up two files first:
+> `G:\zunedb.dat`, `G:\zunedb.BAK`, `G:\drmStore.dat`.
+> If you flash first and lose them, you may never get sync back on that unit.
+
+## Why it happens (the actual mechanism)
+
+Three things in this project can damage the device's media/DRM state:
+
+1. **A failed boot formats the 150 MB system partition.** Every time the bootloader rejects
+   an image, the device wipes `F:` as a "security measure". That is recoverable — `F:` is
+   just firmware files — but it also means the device comes up in a half-initialised state.
+2. **Running the 1.0 TEST firmware rewrites the data partition's library.** 1.0 TEST is a
+   PMC (Portable Media Center) build: it creates `G:\MediaLibrary.edb` and
+   `G:\MediaLibrary_thumbs.edb`, and rebuilds the partition layout in its own image. 3.3
+   then finds a library it does not understand.
+3. **The vault re-wrap (AUTH196) is RAM-only.** The device cannot persist new security
+   state (`persistent_security_write_implemented: false` in the builder's report), so the
+   Zune client's cached "relationship" no longer matches what the device presents.
+
+The visible result is always the same: the device enumerates fine, and sync dies with
+`C00D11CD (80004005)` while the relationship shows **guest**.
+
 ## Symptom
 
 The Zune 4.8 client enumerates the device (name, capacity, art), but every sync fails with:

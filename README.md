@@ -152,6 +152,11 @@ Full detail: `docs/08-reproduction.md`.
   no font data; build your subset from a font you own.
 * **Brick risk.** Everything here is firmware surgery on a 20-year-old device. The lax
   bootloader makes recovery easy (rewrite `nk.bin`) but it is not risk-free.
+* **Sync can break — and it is preventable.** A failed boot formats the system partition,
+  and running the 1.0 TEST firmware rewrites the data partition's media library, so the
+  Zune client stops syncing (C00D11CD). **Before the first flash, copy
+  G:\zunedb.dat, G:\zunedb.BAK and G:\drmStore.dat to your PC.** Details:
+  docs/07-sync-fix.md.
 * **Zune software must never "restore" the device.**
 * `Acs_*.hex` (FM radio firmware) and the two `zdkscenes*.gem` slots are repurposed as font
   storage; radio firmware update and ZDK sample scenes are therefore unavailable.

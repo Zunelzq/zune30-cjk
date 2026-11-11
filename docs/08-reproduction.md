@@ -40,6 +40,19 @@ G:\  →  data partition (zunedb.dat, drmStore.dat, Content\, ...)
 
 Keep `EBoot.bin` from your own device. **Never lose it.**
 
+> ### ⚠️ Mandatory before the first flash — copy these three `G:\` files
+>
+> ```
+> G:\zunedb.dat      4 MB   SQL CE media library
+> G:\zunedb.BAK      4 MB
+> G:\drmStore.dat    ~54 MB DRM store
+> ```
+>
+> They are the difference between "sync still works afterwards" and "sync is permanently
+> broken". A failed boot formats `F:`; running the 1.0 TEST firmware rewrites the data
+> partition's library; the AUTH196 vault re-wrap cannot persist security state. Once those
+> files are gone you cannot recreate a matching relationship — see `07-sync-fix.md`.
+
 ## 2. Install the 1.0 TEST bootloader
 
 1. Copy the 1.0 TEST `EBoot.bin` (sha256 `11D94DE4…`) to `F:\EBoot.bin`.
