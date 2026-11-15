@@ -119,6 +119,23 @@ If games still launch but won't sync, try the WMDRM fix first.
 
 ---
 
+## Credits
+
+**ZuneDev / Zune Modding Helper** — the community tool whose WMVCORE shim fixes the
+video-only variant of this error, and whose authors documented the Windows-side breakage
+long before I hit it.
+
+**1977899016-cell/zune30-research** — the CE tooling and AUTH196 work that makes custom
+firmware possible; the device-side notes in this write-up came from comparing against their
+research.
+
+**kbhomes/libmtp-zune** — the MTPZ protocol documentation that explains why the device
+behaves the way it does once it is unlocked.
+
+If you contributed and I missed you, say so and I'll fix the credits.
+
+---
+
 ## Links
 
 - Repo (full write-up + device-side notes): https://github.com/Zunelzq/zune30-cjk
