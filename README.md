@@ -88,6 +88,7 @@ docs/
   11-downgrade.md               3.3 → 1.0 TEST downgrade, and what it costs
   12-mtpz-protocol.md           MTPZ protocol as observed (opcodes, handshake, replay result)
   13-field-notes.md             field notes: hardware, firmware, tooling, methodology
+  14-sync-failure-taxonomy.md   the seven different things "sync failed" can mean
   ACKNOWLEDGEMENTS.md           itemised credits (EN + 中文)
 scripts/
   build_cjk_font.py             subset + strip hints + rename + CE-LZX size check
