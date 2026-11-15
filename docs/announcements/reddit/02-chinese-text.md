@@ -146,9 +146,36 @@ reasonable choice.
 
 ---
 
+## Credits — this is not my discovery
+
+None of this would exist without other people's work. Specifically:
+
+**`1977899016-cell/zune30-research`** — the single largest contribution.
+Their repository contains the AUTH196 builder (which is the *only* reason a 1.0-era device
+can boot 3.3 at all), the strict B000FF container parser/rebuilder, the CE LZX encoder and
+decoder for `default.fdf`, the ROM file-table layout, the registry hive tooling, and
+`build_font_loader.py` — the native CE ARM loader design I used here. Without that
+tooling there is no custom image and no CJK work. Their README also states plainly that
+the 3.3 compatibility image does **not** include Chinese, which is what told me this was
+still unsolved and worth attempting.
+
+**The Zune community on Baidu Tieba (around 2009)** — the first people to show that CJK
+rendering on these devices was possible at all. That thread is the reason the idea
+survived.
+
+**ahlanchuck** — "Firmware Swapping on Zune 30 (Keel) Models", the write-up that explained
+the EBoot/NOR/`nk.bin` boot chain before anyone else documented it.
+
+**fontTools** — the subsetting toolchain that makes a usable font size possible.
+
+If you contributed and I missed you, tell me and I'll fix the credits.
+
+---
+
 ## Links
 
 - Repo (scripts + full guide): https://github.com/Zunelzq/zune30-cjk
+- Upstream research / AUTH196 / CE tooling: https://github.com/1977899016-cell/zune30-research
 - Noto Sans CJK (open font, OFL): https://github.com/notofonts/noto-cjk
 - fontTools: https://github.com/fonttools/fonttools
 - Python: https://www.python.org/downloads/
