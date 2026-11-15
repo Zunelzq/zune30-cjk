@@ -149,6 +149,17 @@ Detailed steps, verification points and troubleshooting: `docs/tutorial.md`.
 * GB2312 coverage only; rare characters box out.
 * No Microsoft firmware, fonts, keys or device-specific files are distributed here.
 
+## Community write-ups
+
+Ready-to-post versions of everything in this repo, written for Reddit:
+
+- **[Full guide](docs/announcements/reddit-complete-guide.md)** - custom firmware, CJK text, SSD freezes and PC sync in one document
+- **[Part 1 - SSD swap freezes](docs/announcements/reddit/01-ssd-freeze.md)** - why an SSD-swapped Zune 30 hangs, and the DMA-off fix
+- **[Part 2 - Chinese / Japanese text](docs/announcements/reddit/02-chinese-text.md)** - the FontLink method that actually works
+- **[Part 3 - Windows 10/11 sync](docs/announcements/reddit/03-windows-sync.md)** - fixing `C00D11CD (80004002)` with WMDRM
+- **[Posting notes](docs/announcements/reddit/README-posting.md)** - suggested order and what not to distribute
+
+"Do not distribute" is not a suggestion: no Microsoft DLLs, no AUTH196 images, no MTPZ key material.
 ## Credits
 
 Full itemised list: **[docs/ACKNOWLEDGEMENTS.md](docs/ACKNOWLEDGEMENTS.md)**.
