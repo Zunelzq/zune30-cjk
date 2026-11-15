@@ -11,6 +11,12 @@ GDI processes FontLink. It fails for boring reasons: the font must be on the **s
 partition (`F:`), the family name must match, the loader's size constant must match the
 font, and stripping hinting makes small text blurry. Here's the whole pipeline.
 
+> **This guide is built on top of other people's work.**
+> The custom-firmware tooling — AUTH196, the CE BIN/LZX parsers, the registry hive
+> tooling and the original ARM font-loader design — comes from
+> **https://github.com/1977899016-cell/zune30-research**.
+> If you have not got a bootable custom image yet, **start there, not here.**
+
 ---
 
 ## What you need
@@ -18,6 +24,7 @@ font, and stripping hinting makes small text blurry. Here's the whole pipeline.
 | Item | Where |
 |---|---|
 | A Zune 30 on custom firmware (TEST bootloader + AUTH196) | see repo |
+| **Upstream firmware tooling — AUTH196, CE BIN/LZX, registry, font loader** | **https://github.com/1977899016-cell/zune30-research** |
 | Python 3 | https://www.python.org/downloads/ |
 | fontTools (font subsetting) | https://github.com/fonttools/fonttools |
 | A CJK font you're licensed to use | e.g. Noto Sans CJK (OFL): https://github.com/notofonts/noto-cjk |
@@ -174,8 +181,14 @@ If you contributed and I missed you, tell me and I'll fix the credits.
 
 ## Links
 
-- Repo (scripts + full guide): https://github.com/Zunelzq/zune30-cjk
-- Upstream research / AUTH196 / CE tooling: https://github.com/1977899016-cell/zune30-research
+**The project this is built on:**
+
+- **https://github.com/1977899016-cell/zune30-research** — AUTH196, CE BIN/LZX tooling,
+  registry hive tooling, the original ARM font-loader design. Start here.
+
+**Everything else:**
+
+- This write-up and the font scripts: https://github.com/Zunelzq/zune30-cjk
 - Noto Sans CJK (open font, OFL): https://github.com/notofonts/noto-cjk
 - fontTools: https://github.com/fonttools/fonttools
 - Python: https://www.python.org/downloads/

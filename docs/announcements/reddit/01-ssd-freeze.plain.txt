@@ -3,6 +3,10 @@ library, the problem isn't the SSD. It's the 2006-era PATA driver running in DMA
 against a drive that answers thousands of times faster than the HDD it was designed for.
 Disabling DMA inside the firmware fixes it, at the cost of slower I/O.
 
+Prerequisite: this needs a bootable custom image. The tooling that makes one —
+AUTH196, the CE BIN/LZX parsers, the registry hive editor — comes from
+https://github.com/1977899016-cell/zune30-research. Start there first.
+
 ————————————
 
 WHAT YOU NEED
@@ -112,8 +116,14 @@ reverted afterwards.
 
 LINKS
 
-• Repo (scripts, parameter tables, full write-up): https://github.com/Zunelzq/zune30-cjk
-• Upstream AUTH196 / CE tooling: https://github.com/1977899016-cell/zune30-research
+The project this is built on:
+
+• https://github.com/1977899016-cell/zune30-research — AUTH196 builder, CE BIN/LZX
+  tooling, registry hive tooling. Start here if you don't have a custom image yet.
+
+Everything else:
+
+• This write-up and the image scripts: https://github.com/Zunelzq/zune30-cjk
 • 7-Zip (for the firmware cab): https://www.7-zip.org/
 
 ————————————
