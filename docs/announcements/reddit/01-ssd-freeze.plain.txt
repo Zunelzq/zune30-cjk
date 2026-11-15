@@ -1,0 +1,123 @@
+TL;DR — If your SSD-swapped Zune 30 freezes when you listen to music and browse the
+library, the problem isn't the SSD. It's the 2006-era PATA driver running in DMA mode
+against a drive that answers thousands of times faster than the HDD it was designed for.
+Disabling DMA inside the firmware fixes it, at the cost of slower I/O.
+
+————————————
+
+WHAT YOU NEED
+
+• A Zune 30 already running custom firmware | Where: see note below
+• ZIF→USB adapter + the usual tools to open the device | Where: —
+• Python 3 + this repo's scripts | Where: https://github.com/Zunelzq/zune30-cjk
+• A known-good nk.bin to fall back to | Where: back it up first
+
+Note: this requires a modified nk.bin. On stock retail firmware the registry is
+read-only and none of this is possible. If you haven't done the TEST bootloader +
+AUTH196 path yet, this guide won't help you — sorry.
+
+————————————
+
+STEP 1 — CONFIRM IT'S THIS PROBLEM
+
+Check these three:
+
+☐ MP3 playback works fine
+☐ Freeze happens only under concurrent load: music playing + scrolling the library
+☐ The original HDD never does this
+
+If yes, continue. If it freezes at random even when idle, suspect the ribbon instead.
+
+STEP 2 — RULE OUT THE HARDWARE (5 MINUTES)
+
+Do this before flashing anything:
+
+1. Reseat the ZIF ribbon; if you have a spare, swap it.
+2. Check the SSD contacts for oxidation.
+3. Make sure the SSD isn't a worn unit with long internal retries.
+
+A bad ribbon produces exactly the same "random freeze" symptom.
+
+STEP 3 — UNDERSTAND WHAT YOU'RE CHANGING
+
+The driver is pmc_atapi_mx31. Its defaults assume a spinning disk:
+
+• Registry value: drivers\builtin\pmc_atapi_mx31\softresettimeout | Default: 48 | Change to: 800
+• Registry value: ...\statuspollcycles | Default: 2000 | Change to: 6000
+• Registry value: ...\statuspollcyclepause | Default: 400 | Change to: 2000
+• Registry value: ...\device0\dma | Default: 1 | Change to: 0 ← the one that matters
+• Registry value: ...\device0\lookahead | Default: 1 | Change to: 0
+• Registry value: ...\device0\writecache | Default: 1 | Change to: 0
+
+The first attempt I made only raised the timeouts and turned off the write cache — it
+did not help. Disabling DMA did.
+
+STEP 4 — EDIT THE REGISTRY INSIDE DEFAULT.FDF
+
+The registry lives inside nk.bin, in the CE hive default.fdf:
+
+1. Extract default.fdf from your image (decompress it — it's CE LZX).
+2. Add/replace the six values above.
+3. Recompress it back into the same fixed ROM slot.
+4. Update the ROM file table entry (size, compressed size, flags).
+5. Rebuild the B000FF record list and recompute every checksum.
+6. Re-parse the result and verify it byte-for-byte.
+
+Step 6 is not optional. Wrong checksums give you a progress bar and then a black screen.
+
+The scripts in the repo do all of this; do not hand-edit a container.
+
+STEP 5 — FLASH AND VERIFY
+
+With the drive on the adapter:
+
+    F:\nk.bin      <- your rebuilt image
+    F:\EBoot.bin   <- 11d94de4... (TEST bootloader — do not touch)
+
+    Get-FileHash F:\nk.bin -Algorithm SHA256      # must match what you built
+    Get-FileHash F:\EBoot.bin -Algorithm SHA256   # must start with 11D94DE4
+
+Reassemble and boot.
+
+Success: device boots normally, and the "music + browse" freeze is gone.
+
+STEP 6 — LIVE WITH THE TRADE-OFF
+
+PIO mode is slower:
+
+• menu scrolling and list loading are noticeably slower
+• library indexing takes longer
+• battery may drain slightly faster (CPU moves data instead of the DMA engine)
+
+For me it's an easy trade. A Zune that freezes is useless; a Zune that's 20% slower is fine.
+
+IF YOU WANT TO KEEP DMA
+
+Two untested ideas:
+
+1. Keep DMA, disable lookahead, raise timeouts.
+2. Lower transfermode from 0x67 to a slower UDMA mode.
+
+Both can prevent boot if the value is wrong. Keep a known-good nk.bin on your PC at all
+times.
+
+ROLLBACK
+
+Copy your previous nk.bin back over F:\nk.bin, boot once.
+
+Never touch EBoot.bin if you're on the TEST bootloader — a retail EBoot cannot be
+reverted afterwards.
+
+————————————
+
+LINKS
+
+• Repo (scripts, parameter tables, full write-up): https://github.com/Zunelzq/zune30-cjk
+• Upstream AUTH196 / CE tooling: https://github.com/1977899016-cell/zune30-research
+• 7-Zip (for the firmware cab): https://www.7-zip.org/
+
+————————————
+
+If you have an SSD-modded Zune: does it freeze the same way? Did DMA-off fix it? Did you
+find a transfermode value that keeps DMA stable? Post your SSD model and I'll add it to
+the table.
