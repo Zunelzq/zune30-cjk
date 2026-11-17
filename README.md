@@ -89,6 +89,7 @@ docs/
   12-mtpz-protocol.md           MTPZ protocol as observed (opcodes, handshake, replay result)
   13-field-notes.md             field notes: hardware, firmware, tooling, methodology
   14-sync-failure-taxonomy.md   the seven different things "sync failed" can mean
+  15-mtp-metadata.md            what MTP can and cannot write (Title/Artist yes, Album no)
   ACKNOWLEDGEMENTS.md           itemised credits (EN + 中文)
 scripts/
   build_cjk_font.py             subset + strip hints + rename + CE-LZX size check
