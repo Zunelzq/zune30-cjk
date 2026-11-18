@@ -1,0 +1,10 @@
+{
+  "_comment": "把 probe --props 读到的真实 GUID/pid 填进来，然后用 --props props.json 传给 sync",
+  "title":  ["{2ED8BA05-0AD3-42DC-B0D0-3DBC3588EEA4}", 2],
+  "artist": ["{2ED8BA05-0AD3-42DC-B0D0-3DBC3588EEA4}", 21],
+  "album":  ["{2ED8BA05-0AD3-42DC-B0D0-3DBC3588EEA4}", 16],
+  "genre":  ["{2ED8BA05-0AD3-42DC-B0D0-3DBC3588EEA4}", 7],
+  "track":  ["{B324F56A-DC5D-46E5-B6DF-D2EA20FA9C4B}", 4],
+  "year":   ["{B324F56A-DC5D-46E5-B6DF-D2EA20FA9C4B}", 6],
+  "duration": ["{2ED8BA05-0AD3-42DC-B0D0-3DBC3588EEA4}", 3]
+}

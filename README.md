@@ -90,7 +90,9 @@ docs/
   13-field-notes.md             field notes: hardware, firmware, tooling, methodology
   14-sync-failure-taxonomy.md   the seven different things "sync failed" can mean
   15-mtp-metadata.md            what MTP can and cannot write (Title/Artist yes, Album no)
+  16-project-status.md          current state: images, capabilities, known limits
   ACKNOWLEDGEMENTS.md           itemised credits (EN + 中文)
+tools/zunesync/                metadata patch tool (offline tests included)
 scripts/
   build_cjk_font.py             subset + strip hints + rename + CE-LZX size check
   patch_loader.py               rewrite the loader's font-size constant
