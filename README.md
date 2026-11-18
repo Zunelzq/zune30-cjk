@@ -92,6 +92,7 @@ docs/
   15-mtp-metadata.md            what MTP can and cannot write (Title/Artist yes, Album no)
   16-project-status.md          current state: images, capabilities, known limits
   17-wire-flash.md              USB wire flashing: protocol, tool, recovery
+  18-flashing-guide.zh-CN.md    flashing tutorial (Chinese): commands, safety checks, recovery
   ACKNOWLEDGEMENTS.md           itemised credits (EN + 中文)
 tools/zunesync/                metadata patch tool (offline tests included)
 scripts/
