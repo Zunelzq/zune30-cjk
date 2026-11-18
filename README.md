@@ -91,6 +91,7 @@ docs/
   14-sync-failure-taxonomy.md   the seven different things "sync failed" can mean
   15-mtp-metadata.md            what MTP can and cannot write (Title/Artist yes, Album no)
   16-project-status.md          current state: images, capabilities, known limits
+  17-wire-flash.md              USB wire flashing: protocol, tool, recovery
   ACKNOWLEDGEMENTS.md           itemised credits (EN + 中文)
 tools/zunesync/                metadata patch tool (offline tests included)
 scripts/
